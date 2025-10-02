@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+  packages: write   # ➡️ autorise GitHub Actions à pousser dans GHCR
+
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
@@ -23,25 +27,25 @@ jobs:
         working-directory: ./app/api
         run: npm ci
 
+      # 🔑 Login avec ton PAT et ton username
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.GHCR_PAT }}
 
-      # ➡️ Ici on crée la variable repo_owner_lc en minuscule
+      # 🔽 Normalisation du owner en minuscules
       - name: Set lowercase repo owner
-        id: repo
-        run: echo "repo_owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        run: echo "REPO_OWNER_LC=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Build API Docker image
-        run: docker build -t ghcr.io/${{ env.repo_owner_lc }}/timi-api:latest ./app/api
+        run: docker build -t ghcr.io/${{ env.REPO_OWNER_LC }}/timi-api:latest ./app/api
 
       - name: Build Frontend Docker image
-        run: docker build -t ghcr.io/${{ env.repo_owner_lc }}/timi-frontend:latest ./app/frontend
+        run: docker build -t ghcr.io/${{ env.REPO_OWNER_LC }}/timi-frontend:latest ./app/frontend
 
       - name: Push Docker images
         run: |
-          docker push ghcr.io/${{ env.repo_owner_lc }}/timi-api:latest
-          docker push ghcr.io/${{ env.repo_owner_lc }}/timi-frontend:latest
+          docker push ghcr.io/${{ env.REPO_OWNER_LC }}/timi-api:latest
+          docker push ghcr.io/${{ env.REPO_OWNER_LC }}/timi-frontend:latest
