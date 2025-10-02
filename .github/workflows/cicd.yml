@@ -39,15 +39,15 @@ jobs:
       # 5. Build image API
       - name: Build API Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner,, }}/timi-api:latest ./app/api
+          docker build -t ghcr.io/${{ toLower(github.repository_owner) }}/timi-api:latest ./app/api
 
       # 6. Build image Frontend
       - name: Build Frontend Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner,, }}/timi-frontend:latest ./app/frontend
+          docker build -t ghcr.io/${{ toLower(github.repository_owner) }}/timi-frontend:latest ./app/frontend
 
       # 7. Push images vers GHCR
       - name: Push Docker images
         run: |
-          docker push ghcr.io/${{ github.repository_owner,, }}/timi-api:latest
-          docker push ghcr.io/${{ github.repository_owner,, }}/timi-frontend:latest
+          docker push ghcr.io/${{ toLower(github.repository_owner) }}/timi-api:latest
+          docker push ghcr.io/${{ toLower(github.repository_owner) }}/timi-frontend:latest
