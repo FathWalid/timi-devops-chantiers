@@ -1,4 +1,5 @@
 export default {
   testEnvironment: "node",
-  transform: {}, // pas de Babel, on reste en ESM pur
+  setupFilesAfterEnv: ["<rootDir>/tests/setupTest.js"],
+  transform: {}, // on désactive Babel, on reste en pur Node ESM
 };
