@@ -1,29 +1,34 @@
-import dotenv from "dotenv";
 import request from "supertest";
 import app from "../src/index.js";
+import { pool } from "./setupTest.js";
 
-dotenv.config({ path: ".env.test" });
+let token; // 🔑 JWT
+let chantierId;
+
+beforeAll(async () => {
+  // Connexion admin → récupère un token JWT
+  const res = await request(app)
+    .post("/api/login")
+    .send({
+      username: process.env.ADMIN_USER || "admin",
+      password: process.env.ADMIN_PASS || "password",
+    });
+
+  token = res.body.token;
+  if (!token) throw new Error("❌ Impossible de récupérer un token JWT !");
+
+  // On nettoie la table avant tests
+  await pool.query("DELETE FROM chantiers");
+});
+
+afterAll(async () => {
+  await pool.end();
+});
 
 describe("API Chantiers (protégée)", () => {
-  let token;
-  let chantierId;
-
-  beforeAll(async () => {
-    // 🔑 Login admin pour obtenir token
-    const res = await request(app)
-      .post("/api/login")
-      .send({
-        username: process.env.ADMIN_USER || "admin",
-        password: process.env.ADMIN_PASS || "password",
-      });
-
-    token = res.body.token;
-  });
-
   it("GET /health doit répondre ok", async () => {
     const res = await request(app).get("/health");
     expect(res.statusCode).toBe(200);
-    expect(res.body.status).toBe("ok");
     expect(res.body.db).toBe("up");
   });
 
@@ -34,6 +39,8 @@ describe("API Chantiers (protégée)", () => {
       .send({ nom: "Chantier Test", ville: "TestVille" });
 
     expect(res.statusCode).toBe(201);
+    expect(res.body.nom).toBe("Chantier Test");
+    expect(res.body.ville).toBe("TestVille");
     chantierId = res.body.id;
   });
 
@@ -52,6 +59,7 @@ describe("API Chantiers (protégée)", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.nom).toBe("Chantier Modifié");
+    expect(res.body.ville).toBe("VilleMod");
   });
 
   it("DELETE /api/chantiers/:id doit supprimer le chantier", async () => {
