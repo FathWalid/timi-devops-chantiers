@@ -24,8 +24,6 @@ jobs:
           --health-interval=5s
           --health-timeout=3s
           --health-retries=5
-        volumes:
-          - ./db/init:/docker-entrypoint-initdb.d
 
     steps:
       - name: Checkout code
@@ -35,6 +33,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "20"
+
+      # ⚡ Initialiser la DB test avec ton script SQL
+      - name: Init test database schema
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql -h localhost -U postgres -d timi_test -p 5433 -f db/init/001_init.sql
 
       - name: Install deps & run tests
         working-directory: ./app/api
