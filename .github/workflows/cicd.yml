@@ -30,13 +30,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ➡️ Ici on crée la variable repo_owner_lc en minuscule
+      - name: Set lowercase repo owner
+        id: repo
+        run: echo "repo_owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Build API Docker image
-        run: docker build -t ghcr.io/${{ toLower(github.repository_owner) }}/timi-api:latest ./app/api
+        run: docker build -t ghcr.io/${{ env.repo_owner_lc }}/timi-api:latest ./app/api
 
       - name: Build Frontend Docker image
-        run: docker build -t ghcr.io/${{ toLower(github.repository_owner) }}/timi-frontend:latest ./app/frontend
+        run: docker build -t ghcr.io/${{ env.repo_owner_lc }}/timi-frontend:latest ./app/frontend
 
       - name: Push Docker images
         run: |
-          docker push ghcr.io/${{ toLower(github.repository_owner) }}/timi-api:latest
-          docker push ghcr.io/${{ toLower(github.repository_owner) }}/timi-frontend:latest
+          docker push ghcr.io/${{ env.repo_owner_lc }}/timi-api:latest
+          docker push ghcr.io/${{ env.repo_owner_lc }}/timi-frontend:latest
