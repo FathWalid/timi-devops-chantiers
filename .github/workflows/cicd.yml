@@ -34,7 +34,7 @@ jobs:
         working-directory: ./app/api
         run: |
           npm install
-          npx jest --runInBand --experimental-vm-modules
+          npx jest --runInBand
 
       # 5. Build image API
       - name: Build API Docker image
