@@ -57,7 +57,7 @@ jobs:
         working-directory: ./app/api
         run: |
           npm ci
-          cross-env NODE_OPTIONS=--experimental-vm-modules npx jest --runInBand
+          npx cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand
 
       # 6. Login à GitHub Container Registry
       - name: Login to GitHub Container Registry
