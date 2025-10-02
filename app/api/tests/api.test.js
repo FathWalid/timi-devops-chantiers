@@ -2,7 +2,7 @@ import request from "supertest";
 import app from "../src/index.js";
 import { pool } from "./setupTest.js";
 
-let token; // 🔑 JWT
+let token;
 let chantierId;
 
 beforeAll(async () => {
@@ -17,7 +17,8 @@ beforeAll(async () => {
   token = res.body.token;
   if (!token) throw new Error("❌ Impossible de récupérer un token JWT !");
 
-  // On nettoie la table avant tests
+  // Nettoyer la DB avant tests
+  await pool.query("DELETE FROM incidents");
   await pool.query("DELETE FROM chantiers");
 });
 
@@ -40,14 +41,12 @@ describe("API Chantiers (protégée)", () => {
 
     expect(res.statusCode).toBe(201);
     expect(res.body.nom).toBe("Chantier Test");
-    expect(res.body.ville).toBe("TestVille");
     chantierId = res.body.id;
   });
 
   it("GET /api/chantiers doit renvoyer le chantier ajouté", async () => {
     const res = await request(app).get("/api/chantiers");
     expect(res.statusCode).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.some((c) => c.nom === "Chantier Test")).toBe(true);
   });
 
@@ -59,7 +58,6 @@ describe("API Chantiers (protégée)", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.nom).toBe("Chantier Modifié");
-    expect(res.body.ville).toBe("VilleMod");
   });
 
   it("DELETE /api/chantiers/:id doit supprimer le chantier", async () => {

@@ -1,3 +1,4 @@
+-- Création table chantiers
 CREATE TABLE IF NOT EXISTS chantiers (
   id SERIAL PRIMARY KEY,
   nom TEXT NOT NULL,
@@ -5,6 +6,7 @@ CREATE TABLE IF NOT EXISTS chantiers (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Création table incidents
 CREATE TABLE IF NOT EXISTS incidents (
   id SERIAL PRIMARY KEY,
   chantier_id INT REFERENCES chantiers(id) ON DELETE CASCADE,
@@ -15,6 +17,7 @@ CREATE TABLE IF NOT EXISTS incidents (
   resolved_at TIMESTAMPTZ
 );
 
+-- Données initiales
 INSERT INTO chantiers (nom, ville) VALUES
   ('Résidence Atlas', 'Casablanca'),
   ('Immeuble Ifriqya', 'Rabat')
