@@ -8,26 +8,29 @@ on:
 
 permissions:
   contents: read
-  packages: write   # ➡️ autorise GitHub Actions à pousser dans GHCR
+  packages: write   # ➡️ autorise GitHub Actions à pousser sur GHCR
 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # Étape 1 : Récupérer le code
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Étape 2 : Setup Node.js (uniquement pour API build si besoin)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "20"
 
+      # Étape 3 : Installer dépendances API
       - name: Install deps
         working-directory: ./app/api
         run: npm ci
 
-      # 🔑 Login avec ton PAT et ton username
+      # Étape 4 : Login GitHub Container Registry avec PAT
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -35,16 +38,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.GHCR_PAT }}
 
-      # 🔽 Normalisation du owner en minuscules
+      # Étape 5 : Normaliser le owner en minuscules
       - name: Set lowercase repo owner
         run: echo "REPO_OWNER_LC=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
+      # Étape 6 : Build image API
       - name: Build API Docker image
         run: docker build -t ghcr.io/${{ env.REPO_OWNER_LC }}/timi-api:latest ./app/api
 
+      # Étape 7 : Build image Frontend
       - name: Build Frontend Docker image
         run: docker build -t ghcr.io/${{ env.REPO_OWNER_LC }}/timi-frontend:latest ./app/frontend
 
+      # Étape 8 : Push images
       - name: Push Docker images
         run: |
           docker push ghcr.io/${{ env.REPO_OWNER_LC }}/timi-api:latest
