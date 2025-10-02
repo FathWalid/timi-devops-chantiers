@@ -31,16 +31,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build API Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/timi-api:latest ./app/api
-        env:
-          repository_owner: ${{ github.repository_owner }}
+        run: docker build -t ghcr.io/${{ toLower(github.repository_owner) }}/timi-api:latest ./app/api
 
       - name: Build Frontend Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/timi-frontend:latest ./app/frontend
-        env:
-          repository_owner: ${{ github.repository_owner }}
+        run: docker build -t ghcr.io/${{ toLower(github.repository_owner) }}/timi-frontend:latest ./app/frontend
 
       - name: Push Docker images
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/timi-api:latest
-          docker push ghcr.io/${{ github.repository_owner }}/timi-frontend:latest
+          docker push ghcr.io/${{ toLower(github.repository_owner) }}/timi-api:latest
+          docker push ghcr.io/${{ toLower(github.repository_owner) }}/timi-frontend:latest
