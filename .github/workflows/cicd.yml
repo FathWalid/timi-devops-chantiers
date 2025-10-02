@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
 
 jobs:
   build-test-deploy:
@@ -12,7 +12,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -21,8 +21,8 @@ jobs:
           - 5433:5432
         options: >-
           --health-cmd="pg_isready -U postgres -d timi_test"
-          --health-interval=5s
-          --health-timeout=3s
+          --health-interval=10s
+          --health-timeout=5s
           --health-retries=5
 
     steps:
@@ -30,27 +30,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Préparer Postgres avec ton init SQL
+      # 2. Attendre que Postgres soit UP
+      - name: Wait for Postgres
+        run: |
+          echo "⏳ Attente que Postgres démarre..."
+          for i in {1..20}; do
+            pg_isready -h localhost -p 5433 -U postgres -d timi_test && break
+            sleep 2
+          done
+
+      # 3. Installer client Postgres & init DB
       - name: Init test database
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
-          PGPASSWORD=postgres psql -h localhost -U postgres -d timi_test -f ./db/init/001_init.sql
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d timi_test -f ./db/init/001_init.sql
 
-      # 3. Setup Node.js
+      # 4. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "20"
 
-      # 4. Installer dépendances et lancer tests
+      # 5. Installer dépendances et lancer tests API
       - name: Install deps & run tests
         working-directory: ./app/api
         run: |
           npm ci
-          npx cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand
+          cross-env NODE_OPTIONS=--experimental-vm-modules npx jest --runInBand
 
-      # 5. Login à GitHub Container Registry
+      # 6. Login à GitHub Container Registry
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -58,17 +67,17 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 6. Build image API
+      # 7. Build image API
       - name: Build API Docker image
         run: |
           docker build -t ghcr.io/${{ github.repository_owner }}/timi-api:latest ./app/api
 
-      # 7. Build image Frontend
+      # 8. Build image Frontend
       - name: Build Frontend Docker image
         run: |
           docker build -t ghcr.io/${{ github.repository_owner }}/timi-frontend:latest ./app/frontend
 
-      # 8. Push images vers GHCR
+      # 9. Push images vers GHCR
       - name: Push Docker images
         run: |
           docker push ghcr.io/${{ github.repository_owner }}/timi-api:latest
