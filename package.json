@@ -1,0 +1,14 @@
+{
+  "name": "timi-devops-chantiers",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:up": "docker compose -f docker-compose.dev.yml up --build",
+    "dev:down": "docker compose -f docker-compose.dev.yml down -v",
+    "dev:logs": "docker compose -f docker-compose.dev.yml logs -f",
+    "api:test": "cd app/api && npm test",
+    "frontend:dev": "cd app/frontend && npm run dev",
+    "frontend:build": "cd app/frontend && npm run build",
+    "frontend:lint": "cd app/frontend && npm run lint"
+  }
+}
