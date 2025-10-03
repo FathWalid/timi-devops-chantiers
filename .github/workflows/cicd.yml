@@ -39,6 +39,14 @@ jobs:
         run: npm ci
         working-directory: ./app/api
 
+        
+      - name: Init test database schema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=timi psql -h localhost -p 5433 -U timi -d timi_test -f db/init/001_init.sql
+
+
       - name: Run API tests
         env:
           DATABASE_URL: postgres://timi:timi@localhost:5433/timi_test
