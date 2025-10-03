@@ -4,11 +4,11 @@ metadata:
   name: timi-api-monitor
   namespace: monitoring
   labels:
-    release: kube-prometheus-stack   # ⚠️ doit correspondre au nom du chart installé
+    release: prometheus   # ⚠️ doit correspondre à ton `helm install prometheus ...`
 spec:
   selector:
     matchLabels:
-      app: timi-api    # correspond au label de ton service timi-api
+      app: timi-api
   namespaceSelector:
     matchNames:
       - timi

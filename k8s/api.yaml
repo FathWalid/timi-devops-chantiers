@@ -17,14 +17,15 @@ spec:
         - name: timi-api
           image: ghcr.io/fathwalid/timi-api:latest
           ports:
-            - containerPort: 5000
+            - name: http              # 👈 ajoute un nom au port
+              containerPort: 5000
           envFrom:
             - secretRef:
                 name: timi-secrets
           readinessProbe:
             httpGet:
               path: /health
-              port: 5000
+              port: http              # 👈 utilise le nom du port
             initialDelaySeconds: 5
             periodSeconds: 10
 
@@ -34,11 +35,13 @@ kind: Service
 metadata:
   name: timi-api
   namespace: timi
+  labels:
+    app: timi-api
 spec:
   type: ClusterIP
   selector:
     app: timi-api
   ports:
-  - name: http   # ✅ Ajout pour Prometheus
-    port: 5000
-    targetPort: 5000
+    - name: http              # 👈 important pour Prometheus
+      port: 5000
+      targetPort: http
