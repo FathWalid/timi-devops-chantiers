@@ -2,56 +2,40 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-permissions:
-  contents: read
-  packages: write   # ➡️ autorise GitHub Actions à pousser sur GHCR
+    branches:
+      - main
 
 jobs:
-  build-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Étape 1 : Récupérer le code
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Étape 2 : Setup Node.js (uniquement pour API build si besoin)
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20"
+          node-version: 20
 
-      # Étape 3 : Installer dépendances API
-      - name: Install deps
-        working-directory: ./app/api
+      - name: Install dependencies
         run: npm ci
+        working-directory: ./app/api
 
-      # Étape 4 : Login GitHub Container Registry avec PAT
-      - name: Login to GitHub Container Registry
+      - name: Run tests
+        run: npm test
+        working-directory: ./app/api
+
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ secrets.DOCKER_USERNAME }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_PAT }}
 
-      # Étape 5 : Normaliser le owner en minuscules
-      - name: Set lowercase repo owner
-        run: echo "REPO_OWNER_LC=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-      # Étape 6 : Build image API
-      - name: Build API Docker image
-        run: docker build -t ghcr.io/${{ env.REPO_OWNER_LC }}/timi-api:latest ./app/api
-
-      # Étape 7 : Build image Frontend
-      - name: Build Frontend Docker image
-        run: docker build -t ghcr.io/${{ env.REPO_OWNER_LC }}/timi-frontend:latest ./app/frontend
-
-      # Étape 8 : Push images
-      - name: Push Docker images
+      - name: Build and push Docker image
         run: |
-          docker push ghcr.io/${{ env.REPO_OWNER_LC }}/timi-api:latest
-          docker push ghcr.io/${{ env.REPO_OWNER_LC }}/timi-frontend:latest
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/timi-api:latest
+          IMAGE_NAME=$(echo $IMAGE_NAME | tr '[:upper:]' '[:lower:]')
+          docker build -t $IMAGE_NAME ./app/api
+          docker push $IMAGE_NAME
