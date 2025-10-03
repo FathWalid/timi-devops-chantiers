@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timi-frontend
+  namespace: timi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: timi-frontend
+  template:
+    metadata:
+      labels:
+        app: timi-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/fathwalid/timi-frontend:latest   # Image construite par ton CI/CD
+          ports:
+            - containerPort: 80
+          env:
+            - name: API_URL
+              value: "http://timi-api:5000"   # 👉 l’API interne dans ton cluster
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timi-frontend
+  namespace: timi
+spec:
+  type: NodePort   # 👉 exposé à l’extérieur
+  selector:
+    app: timi-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080   # 👉 tu accèdes depuis http://localhost:30080

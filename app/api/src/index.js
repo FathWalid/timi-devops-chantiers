@@ -5,6 +5,8 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { resolve } from "path";
 import { verifyToken } from "./auth.js";
+import { metricsHandler, chantierRequests } from "./metrics.js";
+
 dotenv.config({ path: resolve("../../.env") });
 const { Pool } = pkg;
 const app = express();
@@ -46,6 +48,8 @@ app.get("/health", async (req, res) => {
 
 // Liste des chantiers → public
 app.get("/api/chantiers", async (req, res) => {
+  chantierRequests.inc(); // ✅ incrément tout de suite à chaque appel
+
   try {
     const { rows } = await pool.query("SELECT * FROM chantiers ORDER BY id");
     res.json(rows);
@@ -53,6 +57,7 @@ app.get("/api/chantiers", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
 
 // Ajouter chantier → protégé
 app.post("/api/chantiers", verifyToken, async (req, res) => {
@@ -99,5 +104,8 @@ app.delete("/api/chantiers/:id", verifyToken, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+app.get("/metrics", metricsHandler);
+
 
 export default app;

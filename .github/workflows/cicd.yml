@@ -2,97 +2,82 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  build-test-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-
-    services:
-      postgres:
-        image: postgres:16
-        ports: ['5433:5432']
-        env:
-          POSTGRES_USER: timi
-          POSTGRES_PASSWORD: timi
-          POSTGRES_DB: timi_test
-        options: >-
-          --health-cmd="pg_isready -U timi -d timi_test"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
 
     steps:
+      # 1. Checkout
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # --- API ---
-      - name: Set up Node.js for API
+      # 2. Setup Node.js (pour tests API)
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: app/api/package-lock.json
 
-      - name: Install API dependencies
+      # 3. Install + run tests API
+      - name: Install API deps
         run: npm ci
         working-directory: ./app/api
 
-
-      - name: Init test database schema
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-          PGPASSWORD=timi psql -h localhost -p 5433 -U timi -d timi_test -f db/init/001_init.sql
-
-
       - name: Run API tests
-        env:
-          DATABASE_URL: postgres://timi:timi@localhost:5433/timi_test
         run: npm test
         working-directory: ./app/api
 
-      # --- FRONTEND ---
-      - name: Set up Node.js for Frontend
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: app/frontend/package-lock.json
+      # 4. Build Docker images (API + Frontend)
+      - name: Build API Docker image
+        run: |
+          IMAGE_API=ghcr.io/${{ github.repository_owner }}/timi-api:latest
+          IMAGE_API=$(echo $IMAGE_API | tr '[:upper:]' '[:lower:]')
+          docker build -t $IMAGE_API ./app/api
 
-      - name: Install Frontend dependencies
-        run: npm ci
-        working-directory: ./app/frontend
+      - name: Build Frontend Docker image
+        run: |
+          IMAGE_FE=ghcr.io/${{ github.repository_owner }}/timi-frontend:latest
+          IMAGE_FE=$(echo $IMAGE_FE | tr '[:upper:]' '[:lower:]')
+          docker build -t $IMAGE_FE ./app/frontend
 
-      - name: Run Frontend build
-        run: npm run build
-        working-directory: ./app/frontend
-
-      # --- DOCKER LOGIN ---
+      # 5. Push vers GHCR
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
-      # --- DOCKER BUILD & PUSH API ---
-      - name: Build and push API image
+      - name: Push Docker images
         run: |
           IMAGE_API=ghcr.io/${{ github.repository_owner }}/timi-api:latest
+          IMAGE_FE=ghcr.io/${{ github.repository_owner }}/timi-frontend:latest
           IMAGE_API=$(echo $IMAGE_API | tr '[:upper:]' '[:lower:]')
-          docker build -t $IMAGE_API ./app/api
+          IMAGE_FE=$(echo $IMAGE_FE | tr '[:upper:]' '[:lower:]')
           docker push $IMAGE_API
+          docker push $IMAGE_FE
 
-      # --- DOCKER BUILD & PUSH FRONTEND ---
-      - name: Build and push Frontend image
+      # 6. Set up kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.29.0
+
+      # 7. Auth au cluster Kubernetes (via KUBECONFIG secret)
+      - name: Set kubeconfig
         run: |
-          IMAGE_FRONT=ghcr.io/${{ github.repository_owner }}/timi-frontend:latest
-          IMAGE_FRONT=$(echo $IMAGE_FRONT | tr '[:upper:]' '[:lower:]')
-          docker build -t $IMAGE_FRONT ./app/frontend
-          docker push $IMAGE_FRONT
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
+
+      # 8. Déployer manifests K8s
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f k8s/ -n timi
+          kubectl rollout status deployment timi-api -n timi
+          kubectl rollout status deployment timi-frontend -n timi

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timi-api
+  namespace: timi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: timi-api
+  template:
+    metadata:
+      labels:
+        app: timi-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/fathwalid/timi-api:latest   # image construite par ton CI/CD
+          ports:
+            - containerPort: 5000
+          env:
+            - name: API_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: timi-config
+                  key: API_PORT
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: timi-config
+                  key: NODE_ENV
+            - name: DATABASE_URL
+              value: postgres://timi:$(POSTGRES_PASSWORD)@timi-postgres:5432/timi
+          envFrom:
+            - secretRef:
+                name: timi-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timi-api
+  namespace: timi
+spec:
+  type: ClusterIP
+  selector:
+    app: timi-api
+  ports:
+    - port: 5000
+      targetPort: 5000
