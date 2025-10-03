@@ -1,0 +1,20 @@
+adminUser: admin
+adminPassword: admin123
+
+service:
+  type: NodePort
+  nodePort: 32000
+
+persistence:
+  enabled: true
+  size: 1Gi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.monitoring.svc.cluster.local
+        isDefault: true

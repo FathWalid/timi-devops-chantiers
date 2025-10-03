@@ -14,26 +14,20 @@ spec:
         app: timi-api
     spec:
       containers:
-        - name: api
-          image: ghcr.io/fathwalid/timi-api:latest   # image construite par ton CI/CD
+        - name: timi-api
+          image: ghcr.io/fathwalid/timi-api:latest
           ports:
             - containerPort: 5000
-          env:
-            - name: API_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: timi-config
-                  key: API_PORT
-            - name: NODE_ENV
-              valueFrom:
-                configMapKeyRef:
-                  name: timi-config
-                  key: NODE_ENV
-            - name: DATABASE_URL
-              value: postgres://timi:$(POSTGRES_PASSWORD)@timi-postgres:5432/timi
           envFrom:
             - secretRef:
                 name: timi-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
 ---
 apiVersion: v1
 kind: Service
