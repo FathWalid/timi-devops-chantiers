@@ -109,6 +109,19 @@ jobs:
 
       - name: Deploy manifests
         run: |
-          kubectl apply -f k8s/ -n timi
+          # 1. Namespace en premier
+          kubectl apply -f k8s/namespace.yaml
+
+          # 2. Secrets + Postgres
+          kubectl apply -f k8s/secret.yaml -n timi
+          kubectl apply -f k8s/postgres.yaml -n timi
+
+          # 3. API + ConfigMap + Frontend
+          kubectl apply -f k8s/configmap.yaml -n timi
+          kubectl apply -f k8s/api.yaml -n timi
+          kubectl apply -f k8s/frontend.yaml -n timi
+
+          # 4. Attendre que ça démarre
+          kubectl rollout status deployment timi-postgres -n timi
           kubectl rollout status deployment timi-api -n timi
           kubectl rollout status deployment timi-frontend -n timi
