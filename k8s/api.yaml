@@ -39,5 +39,6 @@ spec:
   selector:
     app: timi-api
   ports:
-    - port: 5000
-      targetPort: 5000
+  - name: http   # ✅ Ajout pour Prometheus
+    port: 5000
+    targetPort: 5000

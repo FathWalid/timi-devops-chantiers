@@ -121,7 +121,10 @@ jobs:
           kubectl apply -f k8s/api.yaml -n timi
           kubectl apply -f k8s/frontend.yaml -n timi
 
-          # 4. Attendre que ça démarre
+          # 4. Monitoring (Prometheus Scrape Config)
+          kubectl apply -f k8s/prometheus-scrape.yaml -n monitoring
+
+          # 5. Attendre que ça démarre
           kubectl rollout status deployment timi-postgres -n timi
           kubectl rollout status deployment timi-api -n timi
           kubectl rollout status deployment timi-frontend -n timi
