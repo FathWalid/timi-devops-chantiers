@@ -7,6 +7,7 @@ import { resolve } from "path";
 import { verifyToken } from "./auth.js";
 import { metricsHandler, chantierRequests, httpRequestDuration, httpErrors } from "./metrics.js";
 import responseTime from "response-time";
+import nodemailer from "nodemailer";
 
 dotenv.config({ path: resolve("../../.env") });
 const { Pool } = pkg;
@@ -121,5 +122,67 @@ app.delete("/api/chantiers/:id", verifyToken, async (req, res) => {
 
 // ✅ Exposer /metrics
 app.get("/metrics", metricsHandler);
+
+// === Route d’envoi d’email via le formulaire de contact ===
+app.post("/api/contact", async (req, res) => {
+  const { name, email, message } = req.body;
+
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: "Tous les champs sont requis." });
+  }
+
+  try {
+    // Configuration du transport SMTP
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT || 587,
+      secure: false, // true si port 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    // === Template HTML TIMI ===
+    const htmlTemplate = `
+    <div style="background-color:#f9f9f9;padding:40px 0;font-family:'Segoe UI',sans-serif;">
+      <div style="max-width:600px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+        <div style="background:#0b0b0b;color:white;padding:20px;text-align:center;">
+          <h2 style="margin:0;font-size:22px;">🏗️ TIMI Contractors</h2>
+          <p style="margin:0;color:#f2c94c;">Formulaire de contact</p>
+        </div>
+        <div style="padding:30px;">
+          <p>Bonjour,</p>
+          <p>Vous avez reçu un nouveau message depuis le site <strong>TIMI Contractors</strong> :</p>
+          <div style="background:#f5f5f5;border-left:4px solid #f2c94c;padding:15px;margin:20px 0;">
+            <p><strong>Nom :</strong> ${name}</p>
+            <p><strong>Email :</strong> ${email}</p>
+            <p><strong>Message :</strong></p>
+            <p style="white-space:pre-line;">${message}</p>
+          </div>
+          <p style="font-size:14px;color:#555;">
+            💡 Répondez directement à cet email pour contacter l’expéditeur.
+          </p>
+        </div>
+        <div style="background:#0b0b0b;color:#f2c94c;text-align:center;padding:15px;font-size:13px;">
+          © ${new Date().getFullYear()} TIMI Contractors — Tous droits réservés
+        </div>
+      </div>
+    </div>`;
+
+    // === Envoi de l’email ===
+    await transporter.sendMail({
+      from: `"TIMI Contact" <${process.env.SMTP_USER}>`,
+      to: process.env.CONTACT_RECEIVER || process.env.SMTP_USER,
+      subject: `📩 Nouveau message de ${name}`,
+      html: htmlTemplate,
+    });
+
+    res.json({ success: true, message: "Email envoyé avec succès ✅" });
+  } catch (error) {
+    console.error("Erreur SMTP :", error);
+    res.status(500).json({ error: "Erreur lors de l'envoi de l'email." });
+  }
+});
 
 export default app;
