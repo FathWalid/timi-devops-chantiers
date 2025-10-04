@@ -18,6 +18,11 @@ jobs:
         image: postgres:16
         ports: ['5433:5432']
         env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          CONTACT_TO: ${{ secrets.CONTACT_TO }}
           POSTGRES_USER: timi
           POSTGRES_PASSWORD: timi
           POSTGRES_DB: timi_test
