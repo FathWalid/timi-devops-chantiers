@@ -8,9 +8,10 @@ export default function ChantierForm({ onAdd }) {
     e.preventDefault();
     if (!nom || !ville) return;
 
-  const API_URL = import.meta.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const apiUrl =
+    import.meta.env.VITE_API_URL || window.location.origin.replace("3000", "5000");
 
-  const res = await fetch(`${API_URL}/chantiers`, {
+  const res = await fetch(`${apiUrl}/api/chantiers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ nom, ville }),
