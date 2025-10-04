@@ -5,7 +5,8 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { resolve } from "path";
 import { verifyToken } from "./auth.js";
-import { metricsHandler, chantierRequests } from "./metrics.js";
+import { metricsHandler, chantierRequests, httpRequestDuration, httpErrors } from "./metrics.js";
+import responseTime from "response-time";
 
 dotenv.config({ path: resolve("../../.env") });
 const { Pool } = pkg;
@@ -16,11 +17,26 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 app.use(cors());
 app.use(express.json());
 
+// ✅ Middleware pour mesurer la durée des requêtes
+app.use(
+  responseTime((req, res, time) => {
+    const route = req.route ? req.route.path : req.path;
+    const statusCode = res.statusCode;
+
+    // Latence (convertie en secondes)
+    httpRequestDuration.labels(req.method, route, statusCode).observe(time / 1000);
+
+    // Compter les erreurs HTTP
+    if (statusCode >= 400) {
+      httpErrors.labels(req.method, route, statusCode).inc();
+    }
+  })
+);
+
 // ⚡ Route login admin
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
 
-  // Pour le POC : admin hardcodé
   if (
     username === (process.env.ADMIN_USER || "admin") &&
     password === (process.env.ADMIN_PASS || "password")
@@ -48,8 +64,7 @@ app.get("/health", async (req, res) => {
 
 // Liste des chantiers → public
 app.get("/api/chantiers", async (req, res) => {
-  chantierRequests.inc(); // ✅ incrément tout de suite à chaque appel
-
+  chantierRequests.inc(); // ✅ incrémente à chaque appel
   try {
     const { rows } = await pool.query("SELECT * FROM chantiers ORDER BY id");
     res.json(rows);
@@ -57,7 +72,6 @@ app.get("/api/chantiers", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
 
 // Ajouter chantier → protégé
 app.post("/api/chantiers", verifyToken, async (req, res) => {
@@ -105,7 +119,7 @@ app.delete("/api/chantiers/:id", verifyToken, async (req, res) => {
   }
 });
 
+// ✅ Exposer /metrics
 app.get("/metrics", metricsHandler);
-
 
 export default app;
