@@ -4,7 +4,7 @@ metadata:
   name: timi-api-monitor
   namespace: monitoring
   labels:
-    release: kube-prometheus-stack   # 👈 correction
+    release: kube-prometheus-stack   # très important
 spec:
   selector:
     matchLabels:
